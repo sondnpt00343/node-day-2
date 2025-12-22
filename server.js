@@ -5,6 +5,8 @@ const response = require("./src/middlewares/response.middleware");
 const errorHandler = require("./src/middlewares/errorHandler.middleware");
 const notFound = require("./src/middlewares/notFound.middleware");
 
+require("./src/config/database");
+
 const app = express();
 const port = 3000;
 
