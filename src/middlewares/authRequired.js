@@ -1,12 +1,28 @@
-const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const { secret } = require("../config/jwt");
 const userModel = require("../models/user.model");
+
+function base64Encode(str) {
+    return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
 
 const authRequired = async (req, res, next) => {
     const accessToken = req.headers.authorization
         ?.replace("Bearer", "")
         ?.trim();
-    const payload = jwt.verify(accessToken, secret);
+    const [encodedHeader, encodedPayload, clientSignature] =
+        accessToken?.split(".");
+
+    const hmac = crypto.createHmac("sha256", secret);
+    hmac.update(`${encodedHeader}.${encodedPayload}`);
+
+    const signature = hmac.digest("base64url");
+
+    if (signature !== clientSignature) {
+        return res.error("Unauthorized", 401);
+    }
+
+    const payload = JSON.parse(atob(encodedPayload));
 
     if (payload.exp < Date.now()) {
         return res.error("Unauthorized", 401);

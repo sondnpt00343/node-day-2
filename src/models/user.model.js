@@ -20,9 +20,9 @@ class User {
         return rows[0];
     }
 
-    async findByEmailAndPassword(email, password) {
-        const query = `select id, email, first_name, last_name from users where email = ? and password = ?;`;
-        const [rows] = await pool.query(query, [email, password]);
+    async findByEmail(email) {
+        const query = `select id, email, first_name, last_name, password from users where email = ?;`;
+        const [rows] = await pool.query(query, [email]);
         return rows[0];
     }
 
