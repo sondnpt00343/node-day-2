@@ -9,13 +9,24 @@ const readDB = async () => {
     } catch (error) {
         if (error.code === "ENOENT") {
             await writeDB({});
+            return {};
         }
-        return {};
+        if (error instanceof SyntaxError) {
+            console.error("Invalid JSON format in db.json, initializing empty database");
+            await writeDB({});
+            return {};
+        }
+        throw error;
     }
 };
 
 const writeDB = async (data) => {
-    await writeFile(DB_FILE, JSON.stringify(data, null, 2), "utf-8");
+    try {
+        await writeFile(DB_FILE, JSON.stringify(data, null, 2), "utf-8");
+    } catch (error) {
+        console.error("Error writing to database:", error);
+        throw error;
+    }
 };
 
 module.exports = { readDB, writeDB };

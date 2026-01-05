@@ -1,15 +1,20 @@
 const bcrypt = require("bcrypt");
 
 const { secret } = require("../config/jwt");
+const { 
+    BCRYPT_SALT_ROUNDS, 
+    ACCESS_TOKEN_TTL_SECONDS, 
+    REFRESH_TOKEN_TTL_DAYS,
+    ERROR_MESSAGES,
+    HTTP_STATUS 
+} = require("../config/constants");
 const userModel = require("../models/user.model");
 const jwt = require("../utils/jwt");
 const strings = require("../utils/strings");
 
-const saltRounds = 10;
-
 const register = async (req, res) => {
     const { email, password } = req.body;
-    const hash = await bcrypt.hash(password, saltRounds);
+    const hash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
 
     const insertId = await userModel.create(email, hash);
     const newUser = {
@@ -17,25 +22,28 @@ const register = async (req, res) => {
         email,
     };
 
-    res.success(newUser, 201);
+    res.success(newUser, HTTP_STATUS.CREATED);
 };
 
 const responseWithTokens = async (user) => {
+    const accessTokenTtlMs = ACCESS_TOKEN_TTL_SECONDS * 1000;
+    const refreshTokenTtlMs = REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000;
+    
     const payload = {
         sub: user.id,
-        exp: Date.now() + 10 * 1000,
+        exp: Date.now() + accessTokenTtlMs,
     };
     const accessToken = jwt.sign(payload, secret);
     const refreshToken = strings.createRandomString(32);
-    const refreshTtl = new Date(Date.now() + 60 * 60 * 24 * 30 * 1000);
+    const refreshTtl = new Date(Date.now() + refreshTokenTtlMs);
 
     await userModel.updateRefreshToken(user.id, refreshToken, refreshTtl);
 
     const response = {
         access_token: accessToken,
-        access_token_ttl: 10,
+        access_token_ttl: ACCESS_TOKEN_TTL_SECONDS,
         refresh_token: refreshToken,
-        refresh_token_ttl: 60 * 60 * 24 * 30,
+        refresh_token_ttl: REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60,
     };
 
     return response;
@@ -46,17 +54,17 @@ const login = async (req, res) => {
     const user = await userModel.findByEmail(email);
 
     if (!user) {
-        return res.error("Unauthorized", 401);
+        return res.error(ERROR_MESSAGES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED);
     }
 
     const isValid = await bcrypt.compare(password, user.password);
 
     if (!isValid) {
-        return res.error("Unauthorized", 401);
+        return res.error(ERROR_MESSAGES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED);
     }
 
     const tokens = await responseWithTokens(user);
-    res.success(user, 200, tokens);
+    res.success(user, HTTP_STATUS.OK, tokens);
 };
 
 const getCurrentUser = async (req, res) => {
@@ -68,7 +76,7 @@ const refreshToken = async (req, res) => {
     const user = await userModel.findByRefreshToken(refreshToken);
 
     if (!user) {
-        return res.error("Unauthorized", 401);
+        return res.error(ERROR_MESSAGES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED);
     }
 
     const tokens = await responseWithTokens(user);

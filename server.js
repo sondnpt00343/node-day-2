@@ -2,15 +2,16 @@ require("dotenv").config();
 
 const express = require("express");
 const appRoute = require("./src/routes");
-const json = require("./src/middlewares/json.middleware");
-const response = require("./src/middlewares/response.middleware");
-const errorHandler = require("./src/middlewares/errorHandler.middleware");
-const notFound = require("./src/middlewares/notFound.middleware");
+const json = require("./src/middlewares/json");
+const response = require("./src/middlewares/response");
+const errorHandler = require("./src/middlewares/errorHandler");
+const notFound = require("./src/middlewares/notFound");
 
 require("./src/config/database");
 
 const app = express();
-const port = 3000;
+const { DEFAULT_PORT } = require("./src/config/constants");
+const port = process.env.PORT || DEFAULT_PORT;
 
 app.use(json);
 app.use(response);

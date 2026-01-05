@@ -1,4 +1,5 @@
 const taskModel = require("../models/task.model");
+const { HTTP_STATUS } = require("../config/constants");
 
 const getAll = (req, res) => {
     const tasks = taskModel.findAll();
@@ -10,11 +11,15 @@ const getOne = (req, res) => {
     res.success(task);
 };
 
-const create = (req, res) => {
-    const newTask = taskModel.create({
-        title: req.body.title,
-    });
-    res.success(newTask, 201);
+const create = async (req, res, next) => {
+    try {
+        const newTask = await taskModel.create({
+            title: req.body.title,
+        });
+        res.success(newTask, HTTP_STATUS.CREATED);
+    } catch (error) {
+        next(error);
+    }
 };
 
 const toggle = (req, res) => {

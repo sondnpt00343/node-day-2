@@ -9,12 +9,16 @@ readDB().then((result) => {
 
 const taskModel = {
     findAll() {
-        return db.tasks;
+        return db.tasks || [];
     },
     findOne(id) {
-        return db.tasks.find((_task) => _task.id === id);
+        return db.tasks?.find((task) => task.id === id);
     },
-    create(task) {
+    async create(task) {
+        if (!db.tasks) {
+            db.tasks = [];
+        }
+        
         const newTask = {
             id: taskId++,
             ...task,
@@ -22,7 +26,12 @@ const taskModel = {
         };
         db.tasks.push(newTask);
 
-        writeDB(db);
+        try {
+            await writeDB(db);
+        } catch (error) {
+            console.error("Failed to save task to database:", error);
+            throw new Error("Failed to create task");
+        }
 
         return newTask;
     },

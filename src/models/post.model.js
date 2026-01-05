@@ -2,24 +2,31 @@ const pool = require("../config/database");
 
 class Post {
     async findAll(limit, offset, filters = {}) {
-        const queryStr = Object.entries(filters)
-            .filter(([_, value]) => value !== void 0)
-            .map(([key, value]) => {
-                value = typeof value === "number" ? value : `"${value}"`;
-                return `${key}=${value}`;
-            })
-            .join(" and ");
-        const [rows] = await pool.query(
-            `select * from posts${
-                queryStr ? ` where ${queryStr}` : ""
-            } limit ${limit} offset ${offset};`
-        );
+        let query = "select * from posts";
+        const conditions = [];
+        const values = [];
+
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined) {
+                conditions.push(`${key} = ?`);
+                values.push(value);
+            }
+        });
+
+        if (conditions.length > 0) {
+            query += ` where ${conditions.join(" and ")}`;
+        }
+
+        query += " limit ? offset ?";
+        values.push(limit, offset);
+
+        const [rows] = await pool.query(query, values);
         return rows;
     }
 
     async findUserPosts(userId) {
-        const query = `select * from posts where id in (select post_id from user_post where user_id = ${userId});`;
-        const [rows] = await pool.query(query);
+        const query = `select * from posts where id in (select post_id from user_post where user_id = ?);`;
+        const [rows] = await pool.query(query, [userId]);
         return rows;
     }
 
@@ -30,7 +37,8 @@ class Post {
 
     async findOne(id) {
         const [rows] = await pool.query(
-            `select * from posts where id = ${id};`
+            `select * from posts where id = ?;`,
+            [id]
         );
         return rows[0];
     }

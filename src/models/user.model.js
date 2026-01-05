@@ -3,7 +3,8 @@ const pool = require("../config/database");
 class User {
     async findAll(limit, offset) {
         const [rows] = await pool.query(
-            `select * from users limit ${limit} offset ${offset};`
+            `select * from users limit ? offset ?;`,
+            [limit, offset]
         );
         return rows;
     }
@@ -15,7 +16,8 @@ class User {
 
     async findOne(id) {
         const [rows] = await pool.query(
-            `select id, email, first_name, last_name, created_at from users where id = ${id};`
+            `select id, email, first_name, last_name, created_at from users where id = ?;`,
+            [id]
         );
         return rows[0];
     }
@@ -28,7 +30,8 @@ class User {
 
     async create(email, password) {
         const [{ insertId }] = await pool.query(
-            `insert into users (email, password) values ("${email}", "${password}")`
+            `insert into users (email, password) values (?, ?)`,
+            [email, password]
         );
         return insertId;
     }

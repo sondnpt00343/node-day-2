@@ -1,10 +1,12 @@
+const { DEFAULT_PAGE_SIZE } = require("../config/constants");
+
 class PaginationService {
     apply(service) {
         if (!service.model) {
             throw Error("Model is required for pagination");
         }
 
-        service.pagination = async (page, limit = 20, filters) => {
+        service.pagination = async (page, limit = DEFAULT_PAGE_SIZE, filters) => {
             const offset = (page - 1) * limit;
             const rows = await service.model.findAll(limit, offset, filters);
             const count = await service.model.count();

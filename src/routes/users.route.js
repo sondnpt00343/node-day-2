@@ -6,6 +6,6 @@ const authRequired = require("../middlewares/authRequired");
 router.get("/", authRequired, userController.getAll);
 router.get("/:id/posts", userController.getUserPosts);
 router.get("/:id", userController.getOne);
-router.get("/", userController.create);
+router.post("/", userController.create);
 
 module.exports = router;
