@@ -7,5 +7,11 @@ router.post("/register", authController.register);
 router.post("/login", authController.login);
 router.post("/refresh-token", authController.refreshToken);
 router.get("/me", authRequired, authController.getCurrentUser);
+router.post("/verify-email", authController.verifyEmail);
+router.post(
+    "/resend-verify-email",
+    authRequired,
+    authController.resendVerifyEmail
+);
 
 module.exports = router;

@@ -1,39 +1,52 @@
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
-const { secret } = require("../config/jwt");
-const { 
-    BCRYPT_SALT_ROUNDS, 
-    ACCESS_TOKEN_TTL_SECONDS, 
+const { authSecret, verifyEmailSecret } = require("../config/jwt");
+const {
+    BCRYPT_SALT_ROUNDS,
+    ACCESS_TOKEN_TTL_SECONDS,
     REFRESH_TOKEN_TTL_DAYS,
     ERROR_MESSAGES,
-    HTTP_STATUS 
+    HTTP_STATUS,
 } = require("../config/constants");
 const userModel = require("../models/user.model");
-const jwt = require("../utils/jwt");
+const jwtUtils = require("../utils/jwt");
 const strings = require("../utils/strings");
+const emailService = require("../services/email.service");
 
 const register = async (req, res) => {
     const { email, password } = req.body;
     const hash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
 
-    const insertId = await userModel.create(email, hash);
-    const newUser = {
-        id: insertId,
-        email,
-    };
+    try {
+        const insertId = await userModel.create(email, hash);
+        const newUser = {
+            id: insertId,
+            email,
+        };
 
-    res.success(newUser, HTTP_STATUS.CREATED);
+        // Send verify email
+        await emailService.sendVerifyEmail(newUser);
+
+        res.success(newUser, HTTP_STATUS.CREATED);
+    } catch (error) {
+        if (String(error).includes("Duplicate")) {
+            res.error("Email da ton tai", HTTP_STATUS.CONFLICT);
+        } else {
+            throw error;
+        }
+    }
 };
 
 const responseWithTokens = async (user) => {
     const accessTokenTtlMs = ACCESS_TOKEN_TTL_SECONDS * 1000;
     const refreshTokenTtlMs = REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000;
-    
+
     const payload = {
         sub: user.id,
         exp: Date.now() + accessTokenTtlMs,
     };
-    const accessToken = jwt.sign(payload, secret);
+    const accessToken = jwtUtils.sign(payload, authSecret);
     const refreshToken = strings.createRandomString(32);
     const refreshTtl = new Date(Date.now() + refreshTokenTtlMs);
 
@@ -83,4 +96,43 @@ const refreshToken = async (req, res) => {
     res.success(tokens);
 };
 
-module.exports = { register, login, getCurrentUser, refreshToken };
+const verifyEmail = async (req, res) => {
+    const token = req.body.token;
+    const payload = jwt.verify(token, verifyEmailSecret);
+
+    if (payload.exp < Date.now()) {
+        res.error("Token het han");
+        return;
+    }
+
+    const userId = payload.sub;
+    const user = await userModel.findOne(userId);
+
+    if (user.verified_at) {
+        res.error("Token da het han hoac khong hop le", 403);
+        return;
+    }
+
+    await userModel.verifyEmail(userId);
+
+    res.success("Verify email thanh cong");
+};
+
+const resendVerifyEmail = async (req, res) => {
+    if (req.user.verified_at) {
+        res.error("Tai khoan da duoc xac minh!", 400);
+        return;
+    }
+
+    await emailService.sendVerifyEmail(req.user);
+    res.success("Resend verify email thanh cong");
+};
+
+module.exports = {
+    register,
+    login,
+    getCurrentUser,
+    refreshToken,
+    verifyEmail,
+    resendVerifyEmail,
+};

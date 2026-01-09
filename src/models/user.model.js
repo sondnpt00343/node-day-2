@@ -16,14 +16,14 @@ class User {
 
     async findOne(id) {
         const [rows] = await pool.query(
-            `select id, email, first_name, last_name, created_at from users where id = ?;`,
+            `select id, email, first_name, last_name, verified_at, created_at from users where id = ?;`,
             [id]
         );
         return rows[0];
     }
 
     async findByEmail(email) {
-        const query = `select id, email, first_name, last_name, password from users where email = ?;`;
+        const query = `select id, email, first_name, last_name, password, verified_at from users where email = ?;`;
         const [rows] = await pool.query(query, [email]);
         return rows[0];
     }
@@ -39,6 +39,12 @@ class User {
     async updateRefreshToken(id, token, ttl) {
         const query = `update users set refresh_token = ?, refresh_expires_at = ? where id = ?`;
         const [{ affectedRows }] = await pool.query(query, [token, ttl, id]);
+        return affectedRows;
+    }
+
+    async verifyEmail(id) {
+        const query = `update users set verified_at = now() where id = ?`;
+        const [{ affectedRows }] = await pool.query(query, [id]);
         return affectedRows;
     }
 

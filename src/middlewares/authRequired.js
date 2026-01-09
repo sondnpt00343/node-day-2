@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { secret } = require("../config/jwt");
+const { authSecret } = require("../config/jwt");
 const { ERROR_MESSAGES, HTTP_STATUS } = require("../config/constants");
 const userModel = require("../models/user.model");
 
@@ -8,20 +8,20 @@ const authRequired = async (req, res, next) => {
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return res.error(ERROR_MESSAGES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED);
     }
-    
+
     const accessToken = authHeader.replace("Bearer ", "").trim();
     if (!accessToken) {
         return res.error(ERROR_MESSAGES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED);
     }
-    
+
     const tokenParts = accessToken.split(".");
     if (tokenParts.length !== 3) {
         return res.error(ERROR_MESSAGES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED);
     }
-    
+
     const [encodedHeader, encodedPayload, clientSignature] = tokenParts;
 
-    const hmac = crypto.createHmac("sha256", secret);
+    const hmac = crypto.createHmac("sha256", authSecret);
     hmac.update(`${encodedHeader}.${encodedPayload}`);
 
     const signature = hmac.digest("base64url");
