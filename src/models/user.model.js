@@ -14,6 +14,18 @@ class User {
         return rows[0].count;
     }
 
+    async countNewUser() {
+        const date = new Date();
+        date.setDate(date.getDate() - 1);
+        const prev = date.toISOString().slice(0, 10);
+
+        const [rows] = await pool.query(
+            "select count(*) as count from users where created_at between ? and ?;",
+            [`${prev} 00:00:00`, `${prev} 23:59:59`]
+        );
+        return rows[0].count;
+    }
+
     async findOne(id) {
         const [rows] = await pool.query(
             `select id, email, first_name, last_name, verified_at, created_at from users where id = ?;`,
